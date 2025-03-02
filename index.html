@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organizador de Rotinas Domésticas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    /* Reset e estilos globais */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    header, footer {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      margin-bottom: 10px;
+    }
+    main {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    /* Formulário de tarefa */
+    .task-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .task-form input,
+    .task-form button {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      flex: 1;
+      min-width: 150px;
+    }
+    .task-form button {
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .task-form button:hover {
+      background-color: #218838;
+    }
+    /* Listas de tarefas */
+    .tasks {
+      margin-bottom: 20px;
+    }
+    .tasks h2 {
+      margin-bottom: 10px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+    #taskList {
+      list-style: none;
+    }
+    #taskList li {
+      background: #f9f9f9;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .completed {
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    .btn-group button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background-color 0.3s ease;
+    }
+    .complete-btn {
+      background-color: #007bff;
+      color: #fff;
+    }
+    .complete-btn:hover {
+      background-color: #0069d9;
+    }
+    .edit-btn {
+      background-color: #17a2b8;
+      color: #fff;
+    }
+    .edit-btn:hover {
+      background-color: #138496;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+      color: #fff;
+    }
+    .delete-btn:hover {
+      background-color: #c82333;
+    }
+    /* Relatório aprimorado */
+    .report {
+      margin-bottom: 20px;
+    }
+    .report h2 {
+      margin-bottom: 10px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+    .report-btn {
+      background-color: #ffc107;
+      color: #333;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-bottom: 15px;
+    }
+    .report-btn:hover {
+      background-color: #e0a800;
+    }
+    #reportList {
+      overflow-x: auto;
+    }
+    #reportList table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #reportList th, #reportList td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    #reportList th {
+      background-color: #f4f4f4;
+    }
+    .summary {
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    @media (max-width: 600px) {
+      .task-form {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Organizador de Rotinas Domésticas</h1>
+    <p>Gerencie suas tarefas diárias de forma simples e organizada.</p>
+  </header>
+  
+  <main>
+    <!-- Seção do formulário -->
+    <section class="task-form-section">
+      <form id="taskForm" class="task-form">
+        <input type="text" id="task" name="task" placeholder="Nome da tarefa" required>
+        <input type="date" id="deadline" name="deadline" required>
+        <!-- Campo de atribuição para ser preenchido -->
+        <input type="text" id="user" name="user" placeholder="Atribuir a" required>
+        <button type="submit">Adicionar Tarefa</button>
+      </form>
+    </section>
+    
+    <!-- Seção de listagem de tarefas -->
+    <section class="tasks">
+      <h2>Tarefas</h2>
+      <ul id="taskList"></ul>
+    </section>
+    
+    <!-- Seção de relatório aprimorado -->
+    <section class="report">
+      <h2>Relatório</h2>
+      <button id="generateReportBtn" class="report-btn">Gerar Relatório</button>
+      <div id="reportList"></div>
+    </section>
+  </main>
+  
+  <footer>
+    <p>&copy; 2025 Organizador de Rotinas Domésticas</p>
+  </footer>
+  
+  <script>
+    (function() {
+      const taskForm = document.getElementById('taskForm');
+      const taskList = document.getElementById('taskList');
+      const generateReportBtn = document.getElementById('generateReportBtn');
+      const reportList = document.getElementById('reportList');
+      
+      // Carrega as tarefas do localStorage ou inicializa com um array vazio
+      let tasksData = JSON.parse(localStorage.getItem('tasksData')) || [];
+      
+      // Atualiza o localStorage
+      function updateLocalStorage() {
+        localStorage.setItem('tasksData', JSON.stringify(tasksData));
+      }
+      
+      // Renderiza a lista de tarefas
+      function renderTasks() {
+        taskList.innerHTML = "";
+        tasksData.forEach((task, index) => {
+          const li = document.createElement("li");
+          li.dataset.index = index;
+          
+          const span = document.createElement("span");
+          // Usa a formatação de data (DD/MM/YYYY)
+          span.textContent = `${task.taskName} - ${task.user} (até ${formatDate(task.deadline)})`;
+          li.appendChild(span);
+          
+          const btnGroup = document.createElement("div");
+          btnGroup.classList.add("btn-group");
+          
+          // Botão para completar tarefa
+          const completeBtn = document.createElement("button");
+          completeBtn.classList.add("complete-btn");
+          completeBtn.setAttribute("aria-label", "Marcar tarefa como completa");
+          completeBtn.textContent = "✔";
+          completeBtn.addEventListener('click', function() {
+            toggleCompleteTask(index);
+          });
+          btnGroup.appendChild(completeBtn);
+          
+          // Botão para editar tarefa com SVG de lápis
+          const editBtn = document.createElement("button");
+          editBtn.classList.add("edit-btn");
+          editBtn.setAttribute("aria-label", "Editar tarefa");
+          editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-9.5 9.5a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l9.5-9.5zM11.207 2L2 11.207V13h1.793L14 3.793 11.207 2z"/>
+          </svg>`;
+          editBtn.addEventListener('click', function() {
+            editTask(index);
+          });
+          btnGroup.appendChild(editBtn);
+          
+          // Botão para excluir tarefa
+          const deleteBtn = document.createElement("button");
+          deleteBtn.classList.add("delete-btn");
+          deleteBtn.setAttribute("aria-label", "Excluir tarefa");
+          deleteBtn.textContent = "✖";
+          deleteBtn.addEventListener('click', function() {
+            deleteTask(index);
+          });
+          btnGroup.appendChild(deleteBtn);
+          
+          li.appendChild(btnGroup);
+          if(task.completed) {
+            li.classList.add("completed");
+          }
+          taskList.appendChild(li);
+        });
+      }
+      
+      // Converte data de YYYY-MM-DD para DD/MM/YYYY
+      function formatDate(dateStr) {
+        const parts = dateStr.split('-');
+        if(parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateStr;
+      }
+      
+      // Converte data de DD/MM/YYYY para YYYY-MM-DD
+      function convertDateToStorageFormat(dateStr) {
+        const parts = dateStr.split('/');
+        if(parts.length === 3) {
+          return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return dateStr;
+      }
+      
+      // Adiciona nova tarefa
+      function addTask() {
+        const taskInput = document.getElementById("task");
+        const deadlineInput = document.getElementById("deadline");
+        const userInput = document.getElementById("user");
+        
+        const taskName = taskInput.value.trim();
+        const deadline = deadlineInput.value;
+        const user = userInput.value.trim();
+        
+        if (!taskName || !deadline || !user) {
+          alert("Preencha todos os campos!");
+          return;
+        }
+        
+        const taskObject = { taskName, deadline, user, completed: false };
+        tasksData.push(taskObject);
+        updateLocalStorage();
+        renderTasks();
+        taskForm.reset();
+      }
+      
+      // Alterna o status de conclusão da tarefa
+      function toggleCompleteTask(index) {
+        tasksData[index].completed = !tasksData[index].completed;
+        updateLocalStorage();
+        renderTasks();
+      }
+      
+      // Remove a tarefa
+      function deleteTask(index) {
+        tasksData.splice(index, 1);
+        updateLocalStorage();
+        renderTasks();
+      }
+      
+      // Permite editar os dados da tarefa via prompt com data no formato (DD/MM/YYYY)
+      function editTask(index) {
+        const task = tasksData[index];
+        const newTaskName = prompt("Editar Nome da Tarefa:", task.taskName);
+        if(newTaskName === null) return;
+        // Exibe a data formatada como DD/MM/YYYY no prompt de edição
+        const newDeadlineInput = prompt("Editar Prazo (dd/mm/aaaa):", formatDate(task.deadline));
+        if(newDeadlineInput === null) return;
+        // Converte a data de DD/MM/YYYY para o formato de armazenamento (YYYY-MM-DD)
+        const newDeadline = convertDateToStorageFormat(newDeadlineInput.trim());
+        const newUser = prompt("Editar Atribuição:", task.user);
+        if(newUser === null) return;
+        
+        if(newTaskName.trim() && newDeadline && newUser.trim()) {
+          tasksData[index] = {
+            taskName: newTaskName.trim(),
+            deadline: newDeadline,
+            user: newUser.trim(),
+            completed: task.completed
+          };
+          updateLocalStorage();
+          renderTasks();
+        } else {
+          alert("Todos os campos são obrigatórios!");
+        }
+      }
+      
+      // Gera o relatório aprimorado
+      function generateReport() {
+        reportList.innerHTML = "";
+        const total = tasksData.length;
+        const completed = tasksData.filter(task => task.completed).length;
+        const pending = total - completed;
+        
+        const summary = document.createElement("div");
+        summary.classList.add("summary");
+        summary.textContent = `Total: ${total} | Completas: ${completed} | Pendentes: ${pending}`;
+        reportList.appendChild(summary);
+        
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+        const headers = ["Tarefa", "Atribuição", "Prazo", "Status"];
+        headers.forEach(text => {
+          const th = document.createElement("th");
+          th.textContent = text;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        const tbody = document.createElement("tbody");
+        tasksData.forEach(task => {
+          const row = document.createElement("tr");
+          const statusText = task.completed ? "COMPLETADA" : "PENDENTE";
+          
+          const cellTask = document.createElement("td");
+          cellTask.textContent = task.taskName;
+          row.appendChild(cellTask);
+          
+          const cellUser = document.createElement("td");
+          cellUser.textContent = task.user;
+          row.appendChild(cellUser);
+          
+          const cellDeadline = document.createElement("td");
+          cellDeadline.textContent = formatDate(task.deadline);
+          row.appendChild(cellDeadline);
+          
+          const cellStatus = document.createElement("td");
+          cellStatus.textContent = statusText;
+          row.appendChild(cellStatus);
+          
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        reportList.appendChild(table);
+      }
+      
+      // Eventos
+      taskForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        addTask();
+      });
+      
+      generateReportBtn.addEventListener('click', generateReport);
+      
+      // Renderiza as tarefas ao carregar a página
+      renderTasks();
+    })();
+  </script>
+</body>
+</html>
